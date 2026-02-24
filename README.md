@@ -1,344 +1,295 @@
 # 🔬 Cytomind - AI-Powered Bone Marrow Cell Classification
 
-Cytomind is an intelligent medical diagnostic system that uses deep learning to analyze bone marrow cell images and classify them into 21 different cell types. The system helps identify potential malignancies and generates comprehensive medical reports.
+A full-stack AI system for automated bone marrow cell analysis and cancer risk assessment. Uses an ensemble deep learning model (ResNet-50 + Vision Transformer) to classify 21 types of bone marrow cells with 93.5% accuracy.
+
+![Architecture](https://img.shields.io/badge/Frontend-Next.js%2016-black?logo=next.js)
+![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)
+![AI](https://img.shields.io/badge/AI-PyTorch-EE4C2C?logo=pytorch)
+![DB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
 
 ---
 
-## 📋 Table of Contents
+## 📋 What You Need to Download/Install
 
-- [System Overview](#system-overview)
-- [Architecture](#architecture)
-- [How Frontend & Backend Connect](#how-frontend--backend-connect)
-- [Getting Started](#getting-started)
-- [API Endpoints](#api-endpoints)
-- [Cell Types](#cell-types)
+Before starting, make sure you have these installed on your computer:
 
----
+| Software | Version | Download Link |
+|----------|---------|---------------|
+| **Node.js** | 18+ | https://nodejs.org/ (Download LTS version) |
+| **Python** | 3.9+ | https://www.python.org/downloads/ (Check "Add to PATH" during install) |
+| **MongoDB** | 7+ | https://www.mongodb.com/try/download/community (Community Server) |
+| **Git** | Latest | https://git-scm.com/downloads |
 
-## 🏗️ System Overview
-
-Cytomind consists of **two main components**:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CYTOMIND SYSTEM                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   ┌─────────────────────┐         ┌─────────────────────────────┐   │
-│   │   FRONTEND          │         │   ML BACKEND                │   │
-│   │   (Next.js)         │ ──────► │   (Python FastAPI)          │   │
-│   │   Port: 3000        │ ◄────── │   Port: 8000                │   │
-│   └─────────────────────┘         └─────────────────────────────┘   │
-│            │                                   │                     │
-│            │                                   │                     │
-│            ▼                                   ▼                     │
-│   ┌─────────────────────┐         ┌─────────────────────────────┐   │
-│   │   MongoDB           │         │   PyTorch Model             │   │
-│   │   (User Data, Jobs) │         │   (ViT + ResNet Ensemble)   │   │
-│   └─────────────────────┘         └─────────────────────────────┘   │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-| Component | Technology | Port | Purpose |
-|-----------|------------|------|---------|
-| **Frontend** | Next.js + React | 3000 | User interface, authentication, dashboard |
-| **ML Backend** | FastAPI + Python | 8000 | AI model inference, image processing, PDF reports |
-| **Database** | MongoDB | 27017 | Store users, jobs, patients, reports |
+> ⚠️ **IMPORTANT**: During Python install, check ✅ **"Add Python to PATH"**
+> ⚠️ **IMPORTANT**: During MongoDB install, select ✅ **"Install as Service"** (default)
 
 ---
 
-## 🔄 How Frontend & Backend Connect
+## 📦 Files You Need
 
-### The Flow (Step by Step)
-
-```
-┌──────────────┐     ┌──────────────────┐     ┌────────────────────┐
-│   Browser    │     │  Next.js Server  │     │  Python ML Backend │
-│   (User)     │     │  (Port 3000)     │     │  (Port 8000)       │
-└──────┬───────┘     └────────┬─────────┘     └─────────┬──────────┘
-       │                      │                         │
-       │  1. Upload Images    │                         │
-       │ ────────────────────>│                         │
-       │                      │                         │
-       │                      │  2. Forward to ML API   │
-       │                      │ ───────────────────────>│
-       │                      │                         │
-       │                      │                         │ 3. AI Model
-       │                      │                         │    Processes
-       │                      │                         │    Images
-       │                      │                         │
-       │                      │  4. Return Job ID       │
-       │                      │ <───────────────────────│
-       │                      │                         │
-       │  5. Job ID Response  │                         │
-       │ <────────────────────│                         │
-       │                      │                         │
-       │  6. Poll Job Status  │                         │
-       │ ────────────────────>│                         │
-       │                      │                         │
-       │  7. Return Results   │                         │
-       │ <────────────────────│                         │
-       │                      │                         │
-       │  8. Download PDF     │                         │
-       │ ────────────────────>│ ───────────────────────>│
-       │                      │                         │
-       │  9. PDF Report       │                         │
-       │ <────────────────────│ <───────────────────────│
-       │                      │                         │
-```
-
-### Connection Details
-
-#### 1️⃣ **User Uploads Images (Browser → Next.js)**
-```
-URL: POST http://localhost:3000/api/upload
-```
-- User selects one or more bone marrow cell images
-- Includes patient data (ID, name, age)
-- Next.js API receives the request
-
-#### 2️⃣ **Next.js Forwards to ML Backend**
-```
-URL: POST http://127.0.0.1:8000/api/analyze
-```
-The Next.js server acts as a **proxy** - it forwards the images to the Python backend:
-
-```javascript
-// File: app/api/upload/route.js
-const ML_BACKEND_URL = 'http://127.0.0.1:8000';
-
-// Forward images to Python backend
-const mlResponse = await fetch(`${ML_BACKEND_URL}/api/analyze`, {
-  method: 'POST',
-  body: formData  // Contains images + patient data
-});
-```
-
-#### 3️⃣ **ML Backend Processes Images**
-```python
-# File: backend/main.py
-@app.post("/api/analyze")
-async def analyze_image(images: List[UploadFile], ...):
-    # Save images
-    # Run AI classification
-    # Generate PDF report
-    # Return job ID
-```
-
-#### 4️⃣ **Status Polling**
-```
-URL: GET http://localhost:3000/api/jobs/{jobId}/status
-```
-Frontend periodically checks if processing is complete.
-
-#### 5️⃣ **Download Report**
-```
-URL: GET http://localhost:3000/api/reports/{jobId}
-```
-Next.js fetches PDF from Python backend and sends to browser.
+You need TWO things:
+1. **This code** (from GitHub)  
+2. **The AI model file** `ensemble_final.pth` (~442 MB) — shared via Google Drive
 
 ---
 
-## 🔗 Configuration Files
+## 🚀 Step-by-Step Setup Guide (Windows)
 
-### Frontend Environment (`.env.local`)
+### Step 1: Clone This Repository
+
+Open **Command Prompt** or **PowerShell** and run:
+
+```bash
+git clone https://github.com/srijeethT/Cytomind.git
+cd Cytomind
+```
+
+### Step 2: Download the AI Model
+
+1. Download `ensemble_final.pth` from the shared Google Drive link
+2. Place it in the **root folder** of the project (same level as `package.json`)
+
+Your folder should look like:
+```
+Cytomind/
+├── app/
+├── backend/
+├── src/
+├── ensemble_final.pth    ← PUT THE MODEL FILE HERE
+├── model_metadata.json
+├── package.json
+└── ...
+```
+
+### Step 3: Install MongoDB
+
+1. Download MongoDB Community Server from: https://www.mongodb.com/try/download/community
+2. Run the installer
+3. Select **"Complete"** installation
+4. ✅ Check **"Install MongoDB as a Service"** (this is the default)
+5. Finish the installation
+6. MongoDB will start automatically as a Windows service
+
+**Verify MongoDB is running:**
+```bash
+# Open PowerShell and run:
+Get-Service MongoDB*
+# You should see: Status = Running
+```
+
+### Step 4: Create Environment Files
+
+#### 4a. Create `.env.local` in the root folder:
+
+Create a new file called `.env.local` in the `Cytomind/` folder with this content:
+
 ```env
 # MongoDB connection
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/cytomind
+MONGODB_URI=mongodb://localhost:27017/cytomind
 
 # JWT Secret for authentication
-JWT_SECRET=your-secret-key
+JWT_SECRET=cytomind-secret-key-2024
 
 # ML Backend URL (Python server)
 ML_BACKEND_URL=http://127.0.0.1:8000
 ```
 
-### Backend Environment (`backend/.env`)
+#### 4b. Create `.env` in the backend folder:
+
+Create a new file called `.env` in the `Cytomind/backend/` folder with this content:
+
 ```env
 # MongoDB connection
-MONGODB_URI=
+MONGODB_URI=mongodb://localhost:27017/cytomind
+
 # Model path
 MODEL_PATH=../ensemble_final.pth
 ```
 
----
+### Step 5: Install Frontend Dependencies
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- Python 3.9+
-- MongoDB (Atlas or local)
-
-### Step 1: Install Frontend Dependencies
 ```bash
-cd C:\Users\manju\Cytomind
+# In the Cytomind/ folder:
 npm install
 ```
 
-### Step 2: Install Backend Dependencies
+This will take 1-2 minutes.
+
+### Step 6: Install Backend Dependencies
+
 ```bash
-cd backend
-pip install -r requirements.txt
+# Install PyTorch (CPU version - works on any computer):
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install other Python packages:
+pip install -r backend/requirements.txt
 ```
 
-### Step 3: Start ML Backend (Terminal 1)
+This will take 5-10 minutes depending on your internet speed.
+
+### Step 7: Start the Application
+
+You need **TWO terminals** open:
+
+#### Terminal 1 — Start ML Backend:
 ```bash
 cd backend
 python main.py
 ```
-✅ Backend runs on: `http://127.0.0.1:8000`
+Wait until you see: `Uvicorn running on http://127.0.0.1:8000`
 
-### Step 4: Start Frontend (Terminal 2)
+#### Terminal 2 — Start Frontend:
 ```bash
+# In the Cytomind/ folder (NOT backend/):
 npm run dev
 ```
-✅ Frontend runs on: `http://localhost:3000`
+Wait until you see: `Local: http://localhost:3000`
 
-### Step 5: Open Browser
-Navigate to `http://localhost:3000`
+### Step 8: Open the App! 🎉
+
+Open your browser and go to: **http://localhost:3000**
+
+1. Click **"Create new lab account"**
+2. Enter your email, lab name, and password
+3. Sign in
+4. Upload bone marrow cell images
+5. Get AI classification results!
 
 ---
 
-## 📁 Project Structure
+## 🔧 Quick Start Script (Windows)
 
-```
-Cytomind/
-├── app/                          # Next.js App Router
-│   ├── api/                      # API Routes (Backend for Frontend)
-│   │   ├── auth/                 # Login/Register endpoints
-│   │   ├── upload/               # Image upload → forwards to ML
-│   │   ├── jobs/[jobId]/status/  # Job status checking
-│   │   └── reports/[jobId]/      # PDF download
-│   ├── layout.js
-│   └── page.js
-│
-├── src/
-│   ├── components/               # React UI Components
-│   │   ├── Dashboard.jsx         # Main dashboard
-│   │   ├── ImageUpload.jsx       # Multi-image uploader
-│   │   ├── PatientForm.jsx       # Patient data input
-│   │   ├── StatusTracker.jsx     # Progress tracking
-│   │   └── ReportViewer.jsx      # Results display
-│   ├── context/
-│   │   └── AuthContext.js        # Authentication state
-│   ├── lib/
-│   │   ├── api.js                # API client functions
-│   │   ├── auth.js               # JWT verification
-│   │   └── db.js                 # MongoDB connection
-│   └── models/                   # Mongoose schemas
-│       ├── User.js
-│       ├── Patient.js
-│       ├── Job.js
-│       └── Report.js
-│
-├── backend/                      # Python ML Backend
-│   ├── main.py                   # FastAPI application
-│   ├── model_loader.py           # PyTorch model loading
-│   ├── report_generator.py       # PDF report creation
-│   ├── database.py               # MongoDB operations
-│   ├── config.py                 # Configuration
-│   └── requirements.txt          # Python dependencies
-│
-├── ensemble_final.pth            # Trained AI Model (ViT + ResNet)
-├── model_metadata.json           # Model configuration
-└── .env.local                    # Environment variables
+Instead of doing steps 7 manually, you can use the batch file:
+
+Create a file called `start.bat` in the root folder:
+```batch
+@echo off
+echo ============================================
+echo    CYTOMIND - Bone Marrow Cell Classifier
+echo ============================================
+echo.
+echo Starting ML Backend...
+start cmd /k "cd backend && python main.py"
+echo Waiting for backend to load (30 seconds)...
+timeout /t 30 /nobreak
+echo.
+echo Starting Frontend...
+start cmd /k "npm run dev"
+echo.
+echo ============================================
+echo   Open http://localhost:3000 in your browser
+echo ============================================
+pause
 ```
 
----
-
-## 🔌 API Endpoints
-
-### Frontend APIs (Next.js - Port 3000)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | User login |
-| POST | `/api/upload` | Upload images for analysis |
-| GET | `/api/jobs/{jobId}/status` | Check job status |
-| GET | `/api/reports/{jobId}` | Download PDF report |
-
-### ML Backend APIs (Python - Port 8000)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Health check |
-| GET | `/health` | Detailed health status |
-| POST | `/api/analyze` | Analyze images (multi-image) |
-| GET | `/api/jobs/{jobId}/status` | Job status |
-| GET | `/api/reports/{jobId}/pdf` | Get PDF report |
+Double-click `start.bat` to start everything!
 
 ---
 
-## 🧬 Cell Types (21 Classes)
+## 🧬 21 Cell Types Classified
 
-The AI model classifies bone marrow cells into these categories:
+### 🔴 Malignant Cells
+| Code | Cell Type | Associated Disease |
+|------|-----------|-------------------|
+| BLA | Blast Cell | Acute Leukemia |
+| MYB | Myeloblast | AML |
+| PMO | Promyelocyte | APL |
+| FGC | Faggot Cell | APL |
+| HAC | Hairy Cell | Hairy Cell Leukemia |
+| LYI | Lymphocyte Immature | ALL |
+| ABE | Abnormal Eosinophil | Myeloproliferative Disorders |
+| PLM | Plasma Cell | Multiple Myeloma |
 
-| Code | Cell Type | Category |
-|------|-----------|----------|
-| ABE | Abnormal Eosinophil | Abnormal |
-| ART | Artefact | Technical |
-| BAS | Basophil | Normal Granulocyte |
-| **BLA** | **Blast Cell** | **⚠️ Malignant** |
-| EBO | Erythroblast | Erythroid Precursor |
-| EOS | Eosinophil | Normal Granulocyte |
-| **FGC** | **Faggot Cell** | **⚠️ Malignant (APL)** |
-| **HAC** | **Hairy Cell** | **⚠️ Malignant** |
-| KSC | Kidney Shaped Cell | Monocytic |
-| LYI | Immature Lymphocyte | Immature |
-| LYT | Lymphocyte | Normal Lymphoid |
-| MMZ | Metamyelocyte | Granulocyte Precursor |
-| MON | Monocyte | Normal Monocytic |
-| **MYB** | **Myeloblast** | **⚠️ Malignant** |
-| NGB | Band Neutrophil | Granulocyte Precursor |
-| NGS | Segmented Neutrophil | Normal Granulocyte |
-| NIF | Immature Neutrophil | Granulocyte Precursor |
-| OTH | Other | Unclassified |
-| PEB | Proerythroblast | Erythroid Precursor |
-| **PLM** | **Plasma Cell** | **⚠️ Potentially Malignant** |
-| **PMO** | **Promyelocyte** | **⚠️ Potentially Malignant** |
+### 🟢 Normal Cells
+| Code | Cell Type |
+|------|-----------|
+| LYT | Lymphocyte |
+| MON | Monocyte |
+| EOS | Eosinophil |
+| BAS | Basophil |
+| NGB | Band Neutrophil |
+| NGS | Segmented Neutrophil |
+| NIF | Neutrophil Immature |
 
----
+### 🟡 Precursor Cells
+| Code | Cell Type |
+|------|-----------|
+| EBO | Erythroblast |
+| PEB | Proerythroblast |
+| MMZ | Metamyelocyte |
+| KSC | Kidney Shaped Cell |
 
-## 🧠 AI Model Details
-
-- **Architecture**: Ensemble of ViT (Vision Transformer) + ResNet50
-- **Input Size**: 224 × 224 pixels
-- **Output**: 21 cell type probabilities
-- **Framework**: PyTorch + HuggingFace Transformers
-
----
-
-## 📊 Report Features
-
-The generated PDF report includes:
-
-✅ Patient Information  
-✅ Overall Classification (BENIGN / SUSPICIOUS / MALIGNANT)  
-✅ Risk Level Assessment  
-✅ Cell Type Distribution Table  
-✅ Individual Cell Analysis (for multiple images)  
-✅ Clinical Interpretation  
-✅ Recommendations  
-✅ Quality Metrics  
+### ⚪ Other
+| Code | Cell Type |
+|------|-----------|
+| ART | Artefact |
+| OTH | Other |
 
 ---
 
-## 🔒 Authentication
+## 🏗️ Architecture
 
-- JWT-based authentication
-- Passwords hashed with bcrypt
-- Token stored in localStorage
-- Protected API routes
+```
+┌─────────────────────────────────────────────────────────┐
+│                   CYTOMIND SYSTEM                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌──────────────┐         ┌──────────────────────┐      │
+│  │   FRONTEND   │ ──────► │    ML BACKEND        │      │
+│  │  (Next.js)   │ ◄────── │  (Python FastAPI)    │      │
+│  │  Port: 3000  │         │    Port: 8000        │      │
+│  └──────┬───────┘         └──────────┬───────────┘      │
+│         │                            │                  │
+│         ▼                            ▼                  │
+│  ┌──────────────┐         ┌──────────────────────┐      │
+│  │   MongoDB    │         │   PyTorch Model      │      │
+│  │ (Users/Jobs) │         │  (ViT + ResNet)      │      │
+│  └──────────────┘         └──────────────────────┘      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 📞 Support
+## ❓ Troubleshooting
 
-For issues or questions, please open a GitHub issue.
+### "MongoDB is not running"
+```bash
+# Start MongoDB service:
+net start MongoDB
+```
+
+### "torch import error / fbgemm.dll error"
+```bash
+# Reinstall PyTorch CPU version:
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu --force-reinstall
+```
+
+### "Cannot connect to backend"
+- Make sure Terminal 1 (backend) shows "Uvicorn running on http://127.0.0.1:8000"
+- The backend takes 30-60 seconds to load the AI model
+
+### "npm install fails"
+```bash
+# Clear cache and retry:
+npm cache clean --force
+npm install
+```
+
+### "Page shows error after login"
+- Make sure `.env.local` file exists in the root folder
+- Make sure MongoDB service is running
 
 ---
 
-**© 2026 Cytomind | AI-Powered Bone Marrow Analysis**
+## 👥 Team
+
+- Built as a Major Project for Bone Marrow Cell Classification
+- AI Model: Ensemble (ResNet-50 + Vision Transformer) — 93.5% Accuracy
+- Dataset: 21 classes of bone marrow cells
+
+---
+
+## 📄 License
+
+This project is for educational/research purposes.
